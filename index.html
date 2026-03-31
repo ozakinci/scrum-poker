@@ -381,7 +381,7 @@
       const median = sortedVotes.length % 2 === 0 ? (sortedVotes[mid - 1] + sortedVotes[mid]) / 2 : sortedVotes[mid];
       medianBox.textContent = `Median: ${median.toFixed(1)}`;
 
-      // Suggested Value (Mode with custom rounding)
+      // Suggested Value (Mode if clear consensus, otherwise Median with custom rounding)
       const voteCounts = {};
       numericVotes.forEach(vote => {
         voteCounts[vote] = (voteCounts[vote] || 0) + 1;
@@ -396,7 +396,11 @@
         }
       }
 
-      let suggestedValue = mode;
+      // Check if there's a clear mode (only one value has maxCount) or if it's a tie
+      const countOfMaxFrequency = Object.values(voteCounts).filter(count => count === maxCount).length;
+      let suggestedValue = (countOfMaxFrequency === 1 && maxCount > 1) ? mode : median;
+
+      // Apply custom rounding rules
       if(suggestedValue != null){
         const decimalPart = suggestedValue - Math.floor(suggestedValue);
         if(decimalPart > 0 && decimalPart <= 0.5){
