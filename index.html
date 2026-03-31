@@ -357,6 +357,57 @@
       try{ await update(ref(db,'state'), { revealed: false, clearVotes: Date.now() }); }catch(e){ console.error(e); }
     }
 
+    function calculateAndRenderStats(){
+      const numericVotes = Object.values(players)
+        .filter(p => p && p.vote != null && p.vote !== '☕' && p.vote !== '?')
+        .map(p => parseFloat(p.vote));
+
+      if(numericVotes.length === 0 || !state.revealed){
+        statsContainer.style.display = 'none';
+        return;
+      }
+
+      statsContainer.style.display = 'flex';
+
+      // Mean and Average (they are the same)
+      const sum = numericVotes.reduce((a, b) => a + b, 0);
+      const mean = sum / numericVotes.length;
+      meanBox.textContent = `Mean: ${mean.toFixed(1)}`;
+      averageBox.textContent = `Average: ${mean.toFixed(1)}`;
+
+      // Median
+      const sortedVotes = [...numericVotes].sort((a, b) => a - b);
+      const mid = Math.floor(sortedVotes.length / 2);
+      const median = sortedVotes.length % 2 === 0 ? (sortedVotes[mid - 1] + sortedVotes[mid]) / 2 : sortedVotes[mid];
+      medianBox.textContent = `Median: ${median.toFixed(1)}`;
+
+      // Suggested Value (Mode with custom rounding)
+      const voteCounts = {};
+      numericVotes.forEach(vote => {
+        voteCounts[vote] = (voteCounts[vote] || 0) + 1;
+      });
+
+      let mode = null;
+      let maxCount = 0;
+      for(const vote in voteCounts){
+        if(voteCounts[vote] > maxCount){
+          mode = parseFloat(vote);
+          maxCount = voteCounts[vote];
+        }
+      }
+
+      let suggestedValue = mode;
+      if(suggestedValue != null){
+        const decimalPart = suggestedValue - Math.floor(suggestedValue);
+        if(decimalPart > 0 && decimalPart <= 0.5){
+          suggestedValue = Math.floor(suggestedValue) + 0.5;
+        }else if(decimalPart > 0.5){
+          suggestedValue = Math.ceil(suggestedValue);
+        }
+      }
+      suggestedBox.textContent = `Suggested: ${suggestedValue != null ? suggestedValue : '-'}`;
+    }
+
     // Sort handlers
     document.getElementById('thName').addEventListener('click', ()=>{
       if(sortField==='name') sortDir = -sortDir; else { sortField='name'; sortDir=1; }
@@ -458,6 +509,7 @@
 
     // Initial UI updates
     renderCards();
+    calculateAndRenderStats();
     updateNameInputState();
 
     // Usage note: recommended Realtime Database rules (set in Firebase console):
