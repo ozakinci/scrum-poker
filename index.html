@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Scrum Poker (Team)</title>
+  <style>
+    :root{--accent:#0b84ff;--bg:#eaf2fb;--card:#fff;--muted:#556;--header-bg:#0b3d91;--danger:#e74c3c;--disabled-bg:#f0f2f5}
+    body{font-family:Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:#222}
+    header{background:var(--header-bg);color:#fff;padding:12px 18px;display:flex;align-items:center;gap:12px;min-height:72px}
+    header img#topLogo{width:200px;height:auto;object-fit:contain}
+    header h1{font-size:20px;margin:0}
+    .container{max-width:980px;margin:18px auto;padding:12px}
+    .name-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+    .name-row{display:flex;gap:6px}
+    .name-row input{flex:1;padding:8px;border:1px solid #ddd;border-radius:4px}
+    input[disabled]{background:var(--disabled-bg);color:#999}
+    button[disabled]{background:#ccc;color:#666;cursor:default;opacity:0.8}
+    .btn{background:var(--accent);color:#fff;border:none;padding:8px 10px;border-radius:4px;cursor:pointer}
+    .btn.danger{background:var(--danger);color:#fff}
+    .btn.ghost{background:#fff;color:var(--accent);border:1px solid #ddd}
+    .panel{background:var(--card);border-radius:6px;padding:12px;box-shadow:0 2px 6px rgba(0,0,0,0.06)}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
+    th{cursor:pointer;user-select:none}
+    .badge{background:#eef6ff;color:var(--accent);padding:4px 8px;border-radius:12px;font-size:12px}
+    .cards{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .card{min-width:48px;padding:10px 12px;border-radius:6px;background:#fff;border:1px solid #ddd;cursor:pointer;text-align:center}
+    .card.selected{box-shadow:0 0 0 3px rgba(74,144,226,0.12);border-color:var(--accent)}
+    .modes{display:flex;gap:8px;margin-top:8px}
+    .controls{display:flex;gap:8px;align-items:center;margin-top:12px}
+    .status{font-size:13px;color:var(--muted)}
+    .you{font-weight:600;color:var(--accent)}
+  </style>
+</head>
+<body>
+  <header>
+    <img id="topLogo" src="https://assets.barco.com/transform/618c2441-7bad-48cf-97e1-dbc2c07e825a/barco-web-logo" alt="Barco" />
+    <h1>🃏 Scrum Poker</h1>
+    <div style="margin-left:auto" id="userStatus" class="status"><span id="connDot" style="width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:8px;background:#f39c12;"></span><span id="statusText">Connecting...</span></div>
+  </header>
+
+  <div class="container">
+    <div class="panel">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="font-weight:600;margin-bottom:8px">Add your name</div>
+        <button id="resetBtn" class="btn danger" title="Reset names and votes">Reset</button>
+      </div>
+      <div class="name-grid" id="nameGrid">
+        <div class="name-row">
+          <input id="nameInput" placeholder="Your name" />
+          <button id="addNameBtn" class="btn">Add</button>
+        </div>
+      </div>
+      <div style="margin-top:6px;color:var(--muted);font-size:13px">Type your name and press Enter or click Add. Names are case-insensitive and unique.</div>
+    </div>
+
+    <div class="panel" style="margin-top:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="font-weight:600">Vote</div>
+        <div class="modes">
+          <button id="modeFibo" class="btn ghost">Fibonacci</button>
+          <button id="modeDays" class="btn ghost">Days</button>
+        </div>
+      </div>
+
+      <div id="cards" class="cards" aria-live="polite"></div>
+      <div style="margin-top:8px;color:var(--muted);font-size:13px">Switching mode clears all existing votes.</div>
+    </div>
+
+    <div class="panel" style="margin-top:12px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-weight:600">Players</div>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button id="revealBtn" class="btn ghost">Reveal</button>
+          <button id="newRoundBtn" class="btn">New Round</button>
+        </div>
+      </div>
+
+      <table id="playersTable">
+        <thead>
+          <tr>
+            <th style="width:48px"></th>
+            <th id="thName">Name <span id="nameSort">▲</span></th>
+            <th id="thVote">Story Points <span id="voteSort"></span></th>
+          </tr>
+        </thead>
+        <tbody id="playersBody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-analytics.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+    import { getDatabase, ref, onValue, set, update, get, remove } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
+
+    // Your web app's Firebase configuration (inserted as provided)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCwdDhavM-QF2_eByY6hXGIfl83olahM0o",
+      authDomain: "scrum-poker-cc6c8.firebaseapp.com",
+      databaseURL: "https://scrum-poker-cc6c8-default-rtdb.europe-west1.firebasedatabase.app/",
+      projectId: "scrum-poker-cc6c8",
+      storageBucket: "scrum-poker-cc6c8.firebasestorage.app",
+      messagingSenderId: "678011564746",
+      appId: "1:678011564746:web:6c79fdb9e8a37304da3a33",
+      measurementId: "G-WJY5X0QLKS"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    try { const analytics = getAnalytics(app); } catch(e) { /* ignore analytics errors in local preview */ }
+
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    // App state
+    let currentUid = null;
+    let players = {}; // cache
+    // include roundId and clearVotes signal so mode/newRound can clear votes without hiding names
+    let state = { revealed: false, mode: 'fibonacci', roundId: null, clearVotes: null };
+    let sortField = 'name';
+    let sortDir = 1; // 1 asc, -1 desc
+
+    // Card sets (start with ? and coffee, then numbers)
+    const fibo = ['?','☕','0','1','2','3','5','8','13','21','34'];
+    const days = ['?','☕','0.5','1','2','3','4','5','6','7','8'];
+
+    // UI refs
+    const nameGrid = document.getElementById('nameGrid');
+    const playersBody = document.getElementById('playersBody');
+    const cardsEl = document.getElementById('cards');
+    const userStatus = document.getElementById('userStatus');
+    const modeFiboBtn = document.getElementById('modeFibo');
+    const modeDaysBtn = document.getElementById('modeDays');
+    const revealBtn = document.getElementById('revealBtn');
+    const newRoundBtn = document.getElementById('newRoundBtn');
+
+    // Single input field + Add button (created in HTML)
+    const singleInput = document.getElementById('nameInput');
+    const singleAddBtn = document.getElementById('addNameBtn');
+    singleAddBtn.addEventListener('click', ()=> addNameFromInput(singleInput));
+    singleInput.addEventListener('keydown', (e)=> { if(e.key === 'Enter') addNameFromInput(singleInput); });
+
+    // Reset button
+    const resetBtn = document.getElementById('resetBtn');
+    resetBtn.addEventListener('click', async ()=>{
+      if(!confirm('Reset names and votes for a fresh round?')) return;
+      try{
+        await update(ref(db,'state'), { revealed: false, roundId: Date.now(), mode: 'fibonacci' });
+      }catch(e){ console.error('Reset failed', e); alert('Reset failed: '+e.message); }
+    });
+
+    // Helpers
+    function sanitizeKey(name){
+      return name.trim().toLowerCase()
+        .replace(/[\.\#\$\[\]\/]/g,'')
+        .replace(/\s+/g,'-')
+        .replace(/[^a-z0-9\-_.]/g,'');
+    }
+
+    function showStatus(txt){
+      const connDot = document.getElementById('connDot');
+      const statusTextEl = document.getElementById('statusText');
+      if(statusTextEl) statusTextEl.textContent = txt;
+      if(connDot){
+        const t = (txt||'').toLowerCase();
+        if(t.includes('connected')) connDot.style.background = '#2ecc71';
+        else if(t.includes('connecting')) connDot.style.background = '#f39c12';
+        else connDot.style.background = 'var(--danger)';
+      }
+    }
+
+    // Enable/disable the name input and Add button depending on whether the user already has a name in this round
+    function updateNameInputState(){
+      try{
+        const myKey = myPlayerKey();
+        const disabled = !!myKey;
+        singleInput.disabled = disabled;
+        singleAddBtn.disabled = disabled;
+        if(disabled){ singleAddBtn.style.opacity = '0.8'; singleAddBtn.style.cursor = 'default'; }
+        else { singleAddBtn.style.opacity = ''; singleAddBtn.style.cursor = ''; }
+      }catch(e){ console.error('updateNameInputState failed', e); }
+    }
+
+    // Add name handler
+    async function addNameFromInput(inputEl){
+      const name = inputEl.value.trim();
+      if(!name) return;
+      if(!currentUid){ alert('Still connecting to Firebase, try again shortly.'); return; }
+
+      const key = sanitizeKey(name);
+      if(!key){ alert('Invalid name'); return; }
+
+      // Always validate against the server (local cache may be stale).
+      try{
+        const snap = await get(ref(db, 'players'));
+        const all = snap.val() || {};
+
+        // If there's already a player owned by this user in the CURRENT round, block.
+        const stillOwnInRound = Object.entries(all).some(([k,v]) => v && v.ownerUid === currentUid && String(v.roundId) === String(state.roundId));
+        if(stillOwnInRound){
+          alert('You already added a name. Remove it first if you want to add a different one.');
+          return;
+        }
+
+        // Clean up any leftover player nodes owned by this user from other rounds (so they can re-add).
+        // Owners are allowed to remove their own nodes per DB rules.
+        for(const [k,v] of Object.entries(all)){
+          if(v && v.ownerUid === currentUid){
+            try{ await remove(ref(db, 'players/' + k)); }catch(e){ /* ignore individual remove errors */ }
+          }
+        }
+
+      }catch(err){
+        console.error('Failed to validate existing players', err);
+        alert('Failed to validate existing players: '+err.message);
+        return;
+      }
+
+      // final local duplicate check (same round and key)
+      if(players[key] && String(players[key].roundId) === String(state.roundId)){
+        alert('Name already exists (case-insensitive).'); return;
+      }
+
+      const playerRef = ref(db, 'players/' + key);
+      try{
+        // attach current roundId so players are scoped to rounds
+        const round = state.roundId || Date.now();
+        await set(playerRef, { name: name, ownerUid: currentUid, vote: null, roundId: round });
+        inputEl.value = '';
+        // disable input immediately (server snapshot will confirm and listeners will keep state in sync)
+        try{ singleInput.disabled = true; singleAddBtn.disabled = true; }catch(e){}
+        updateNameInputState();
+      }catch(e){ console.error(e); alert('Failed to add name: '+e.message); }
+    }
+
+    // Find first player owned by current user (in current round)
+    function myPlayerKey(){
+      for(const k in players){
+        const p = players[k]; if(!p) continue;
+        if(p.ownerUid === currentUid){
+          // match only when roundId matches (or both are unset)
+          if(state.roundId == null && p.roundId == null) return k;
+          if(state.roundId != null && p.roundId != null && String(p.roundId) === String(state.roundId)) return k;
+        }
+      }
+      return null;
+    }
+
+    function renderPlayers(){
+      playersBody.innerHTML = '';
+      const arr = Object.entries(players).map(([key,val])=>({key, name: val && val.name, ownerUid: val && val.ownerUid, vote: val && val.vote, roundId: val && val.roundId}));
+      // filter by current roundId when present
+      const filtered = arr.filter(p => {
+        if(state.roundId == null) return true;
+        return String(p.roundId) === String(state.roundId);
+      });
+      filtered.sort((a,b)=>{
+        if(sortField==='name'){
+          return sortDir * a.name.localeCompare(b.name);
+        }else{
+          // vote sort: null/undefined => treated as -Infinity
+          const va = (a.vote==null || a.vote === '') ? -Infinity : (isNaN(Number(a.vote)) ? a.vote : Number(a.vote));
+          const vb = (b.vote==null || b.vote === '') ? -Infinity : (isNaN(Number(b.vote)) ? b.vote : Number(b.vote));
+          if(va < vb) return -1*sortDir; if(va > vb) return 1*sortDir; return 0;
+        }
+      });
+
+      filtered.forEach(p=>{
+        const tr = document.createElement('tr');
+        // delete cell (owner only)
+        const tdDel = document.createElement('td');
+        if(p.ownerUid === currentUid){
+          const delBtn = document.createElement('button'); delBtn.className='btn ghost'; delBtn.textContent='−';
+          delBtn.title = 'Remove your name';
+          delBtn.addEventListener('click', ()=> deletePlayer(p.key));
+          tdDel.appendChild(delBtn);
+        }
+        const tdName = document.createElement('td');
+        const nameSpan = document.createElement('span'); nameSpan.textContent = p.name;
+        tdName.appendChild(nameSpan);
+        if(p.ownerUid === currentUid) { const s = document.createElement('span'); s.textContent=' you'; s.className='badge you'; s.style.marginLeft='8px'; tdName.appendChild(s); }
+        const tdVote = document.createElement('td');
+        // show vote if revealed OR (not revealed but this is my row)
+        if(state.revealed){ tdVote.textContent = p.vote == null ? '' : p.vote; }
+        else{
+          if(p.ownerUid === currentUid){ tdVote.textContent = p.vote == null ? '' : p.vote; }
+          else { tdVote.textContent = (p.vote != null && p.vote !== '') ? 'X' : ''; }
+        }
+        tr.appendChild(tdDel); tr.appendChild(tdName); tr.appendChild(tdVote);
+        playersBody.appendChild(tr);
+      });
+    }
+
+    async function deletePlayer(key){
+      if(!key) return;
+      try{
+        await remove(ref(db, 'players/' + key));
+        // immediately update local cache and UI so the owner can add a new name without waiting
+        if(players && players[key]){
+          delete players[key];
+          renderPlayers(); renderCards();
+          updateNameInputState();
+        }
+      }catch(e){ console.error(e); alert('Failed to delete: '+e.message); }
+    }
+
+    function renderCards(){
+      cardsEl.innerHTML = '';
+      const set = (state.mode === 'days') ? days : fibo;
+      const myKey = myPlayerKey();
+      const myVote = myKey ? players[myKey] && players[myKey].vote : null;
+      set.forEach(v=>{
+        const b = document.createElement('div'); b.className='card'; b.textContent = v;
+        if(myVote != null && String(myVote) === String(v)) b.classList.add('selected');
+        b.addEventListener('click', ()=> onCardClick(v));
+        cardsEl.appendChild(b);
+      });
+    }
+
+    async function onCardClick(value){
+      const key = myPlayerKey();
+      if(!key){ alert('You must add your name first (use the Add button above).'); return; }
+      try{
+        await update(ref(db, 'players/' + key), { vote: value });
+      }catch(e){ console.error(e); alert('Failed to set vote: '+e.message); }
+    }
+
+    // Toggle mode: 'fibonacci' or 'days'
+    async function setMode(mode){
+      if(mode === state.mode) return;
+      try{ await update(ref(db, 'state'), { mode: mode, revealed: false, clearVotes: Date.now() }); }catch(e){ console.error(e); }
+    }
+
+    async function setRevealed(val){
+      try{ await update(ref(db, 'state'), { revealed: val }); }catch(e){ console.error(e); }
+    }
+
+    async function newRound(){
+      try{ await update(ref(db,'state'), { revealed: false, clearVotes: Date.now() }); }catch(e){ console.error(e); }
+    }
+
+    // Sort handlers
+    document.getElementById('thName').addEventListener('click', ()=>{
+      if(sortField==='name') sortDir = -sortDir; else { sortField='name'; sortDir=1; }
+      document.getElementById('nameSort').textContent = sortDir===1? '▲':'▼'; renderPlayers();
+    });
+    document.getElementById('thVote').addEventListener('click', ()=>{
+      if(sortField==='vote') sortDir = -sortDir; else { sortField='vote'; sortDir=1; }
+      document.getElementById('voteSort').textContent = sortDir===1? '▲':'▼'; renderPlayers();
+    });
+
+    // Mode buttons
+    modeFiboBtn.addEventListener('click', ()=> setMode('fibonacci'));
+    modeDaysBtn.addEventListener('click', ()=> setMode('days'));
+
+    revealBtn.addEventListener('click', ()=> setRevealed(!state.revealed));
+    newRoundBtn.addEventListener('click', ()=> newRound());
+
+    // Firebase listeners - attach after auth to ensure permissions and immediate state
+    let playersRef, stateRef;
+    let listenersAttached = false;
+
+    // Track previous state to trigger client-side vote clears when mode/round/clearVotes changes
+    let lastStateSnapshot = { mode: state.mode, roundId: null, revealed: state.revealed, clearVotes: null };
+
+    async function clearMyVote(){
+      const k = myPlayerKey();
+      if(k){
+        try{ await update(ref(db, 'players/' + k), { vote: null }); }catch(e){ console.error(e); }
+      }
+    }
+
+    function attachListeners(){
+      if(listenersAttached) return;
+      playersRef = ref(db, 'players');
+      stateRef = ref(db, 'state');
+
+      onValue(playersRef, snap => {
+        players = snap.val() || {};
+        renderPlayers(); renderCards();
+        updateNameInputState();
+      });
+
+      onValue(stateRef, snap => {
+        const s = snap.val() || {};
+        const prev = { ...lastStateSnapshot };
+        const newRoundId = s.roundId || null;
+        const newClear = s.clearVotes || null;
+        // If no roundId exists yet, initialize it so clients are consistent
+        if(newRoundId == null){
+          try{ update(ref(db,'state'), { roundId: Date.now(), mode: s.mode || state.mode, revealed: s.revealed === true }); }
+          catch(e){ console.error('Failed to init roundId', e); }
+          return;
+        }
+
+        state.revealed = s.revealed === true;
+        state.mode = s.mode || 'fibonacci';
+        state.roundId = newRoundId;
+        state.clearVotes = newClear;
+        // if mode OR round OR clearVotes changed, clear this client's vote (each client clears its own vote)
+        if(prev.mode !== state.mode || prev.roundId !== newRoundId || prev.clearVotes !== state.clearVotes){ clearMyVote(); }
+        lastStateSnapshot = { mode: state.mode, roundId: newRoundId, revealed: state.revealed, clearVotes: state.clearVotes };
+        // simple visual toggle for mode
+        modeFiboBtn.style.border = state.mode==='fibonacci' ? '2px solid var(--accent)' : '';
+        modeDaysBtn.style.border = state.mode==='days' ? '2px solid var(--accent)' : '';
+        // reveal button text
+        revealBtn.textContent = state.revealed ? 'Hide' : 'Reveal';
+        renderPlayers(); renderCards();
+        updateNameInputState();
+      });
+
+      listenersAttached = true;
+    }
+
+    // Ensure we sign in and attach listeners as soon as possible so initial snapshots arrive
+    async function ensureSignedIn(){
+      try{
+        const cred = await signInAnonymously(auth);
+        if(cred && cred.user){
+          if(!currentUid || currentUid !== cred.user.uid){
+            currentUid = cred.user.uid;
+            showStatus('Connected (anon)');
+            attachListeners();
+          }
+        }
+      }catch(err){ console.error('Auth error', err); showStatus('Auth error'); }
+    }
+
+    onAuthStateChanged(auth, user => {
+      if(user){
+        if(!currentUid || currentUid !== user.uid){
+          currentUid = user.uid;
+          showStatus('Connected (anon)');
+          attachListeners();
+        }
+      } else { showStatus('Not signed in'); }
+    });
+
+    ensureSignedIn();
+
+    // Initial UI updates
+    renderCards();
+    updateNameInputState();
+
+    // Usage note: recommended Realtime Database rules (set in Firebase console):
+    // {
+    //  "rules": {
+    //    ".read": "auth != null",
+    //    ".write": "auth != null",
+    //    "players": {
+    //      "$playerId": {
+    //        ".write": "(!data.exists() && newData.child('ownerUid').val() === auth.uid) || (data.exists() && data.child('ownerUid').val() === auth.uid)"
+    //      }
+    //    },
+    //    "state": { ".write": "auth != null" }
+    //  }
+    // }
+
+  </script>
+</body>
+</html>

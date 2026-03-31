@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Scrum Poker — Smoke Test</title>
+  <style>body{font-family:Segoe UI,Roboto,Arial,sans-serif;padding:18px}</style>
+</head>
+<body>
+  <h2>Scrum Poker — Smoke Test</h2>
+  <p>This page programmatically signs in anonymously and performs a small sequence of DB writes and reads.</p>
+  <button id="run">Run Smoke Test</button>
+  <pre id="out"></pre>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+    import { getDatabase, ref, set, update, get, remove } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
+
+    const out = document.getElementById('out');
+    function log(...args){ out.textContent += args.join(' ') + '\n'; }
+
+    // NOTE: This config mirrors the one in index.html — keep in sync
+    const firebaseConfig = {
+      apiKey: "AIzaSyCwdDhavM-QF2_eByY6hXGIfl83olahM0o",
+      authDomain: "scrum-poker-cc6c8.firebaseapp.com",
+      databaseURL: "https://scrum-poker-cc6c8-default-rtdb.europe-west1.firebasedatabase.app/",
+      projectId: "scrum-poker-cc6c8",
+      storageBucket: "scrum-poker-cc6c8.firebasestorage.app",
+      messagingSenderId: "678011564746",
+      appId: "1:678011564746:web:6c79fdb9e8a37304da3a33",
+      measurementId: "G-WJY5X0QLKS"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    document.getElementById('run').addEventListener('click', async ()=>{
+      out.textContent = '';
+      log('Signing in anonymously...');
+      try{
+        const cred = await signInAnonymously(auth);
+        const uid = cred.user.uid;
+        log('Signed in, uid=', uid);
+
+        const key = 'qa-test-' + Date.now();
+        const playerRef = ref(db, 'players/' + key);
+        log('Creating test player:', key);
+        await set(playerRef, { name: key, ownerUid: uid, vote: null });
+
+        log('Setting vote to 3');
+        await update(playerRef, { vote: '3' });
+
+        log('Reading back player...');
+        const snap = await get(playerRef);
+        log('Player data:', JSON.stringify(snap.val()));
+
+        log('Cleaning up: removing test player...');
+        await remove(playerRef);
+
+        log('Smoke test completed successfully.');
+      }catch(e){ log('Error:', e && e.message ? e.message : e); }
+    });
+  </script>
+</body>
+</html>
