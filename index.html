@@ -359,7 +359,7 @@
 
     function calculateAndRenderStats(){
       const numericVotes = Object.values(players)
-        .filter(p => p && p.vote != null && p.vote !== '☕' && p.vote !== '?')
+        .filter(p => p && p.vote != null && p.vote !== '☕' && p.vote !== '?' && String(p.roundId) === String(state.roundId))
         .map(p => parseFloat(p.vote));
 
       if(numericVotes.length === 0 || !state.revealed){
