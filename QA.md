@@ -43,34 +43,50 @@ python -m http.server 8000
    - Click `Reveal`.
    - Expected: Both tabs now display all votes.
 
-9. New Round:
+9. **Statistics display** (NEW):
+   - With votes revealed, you should see four badges below the Reveal/New Round buttons:
+     - **Mean**: Average of all numeric votes
+     - **Median**: Middle value when votes are sorted
+     - **Average**: Same as mean (for clarity)
+     - **Suggested**: Intelligent recommendation showing either:
+       - The most repeated vote (if clear consensus)
+       - The median value (if votes are scattered or tied)
+       - Custom rounding: decimals ≤0.5 round to .5 (e.g., 2.1→2.5), decimals >0.5 round up (e.g., 2.6→3)
+   - Example tests:
+     - Votes [4, 4] → Mean: 4.0, Median: 4.0, Suggested: 4
+     - Votes [1, 8] → Mean: 4.5, Median: 4.5, Suggested: 5 (median with rounding)
+     - Votes [3, 3, 3, 5] → Mean: 3.5, Median: 3.0, Suggested: 3 (mode, most repeated)
+   - When votes are hidden, the stats badges disappear.
+   - Stats correctly exclude votes from previous rounds (use different roundId).
+
+10. New Round:
    - Click `New Round`.
-   - Expected: All votes clear on both tabs and `Reveal` returns to hidden. Names remain.
+   - Expected: All votes clear on both tabs and `Reveal` returns to hidden. Names remain. Stats badges disappear.
 
-10. Reset button:
+11. Reset button:
    - Click the red `Reset` button in the top-right of the name panel.
-   - Expected: The app starts a fresh round (previous names and votes are hidden), `Reveal` resets to hidden, and everyone can add names again immediately.
+   - Expected: The app starts a fresh round (previous names and votes are hidden), `Reveal` resets to hidden, and everyone can add names again immediately. Stats badges disappear.
 
-11. Mode toggle:
+12. Mode toggle:
    - Click `Days` mode; expected: cards switch to day values and existing votes clear (names remain).
-   - Note: Switching mode clears all existing votes.
+   - Note: Switching mode clears all existing votes. Stats badges disappear.
 
-12. Sorting:
+13. Sorting:
    - Click the `Name` header to toggle asc/desc; verify ordering.
    - Click the `Story Points` header to sort by vote value.
 
-13. Delete name:
+14. Delete name:
    - Click the left-side `−` button next to your name to remove it.
    - Expected: Your name disappears and you can add again immediately (input re-enables on that client).
 
-14. Duplicate name validation:
+15. Duplicate name validation:
    - Try adding `ALICE` (different case); expected: blocked with an alert (names are case-insensitive unique).
 
-15. Initial load & realtime check:
+16. Initial load & realtime check:
    - Open Tab A, add a player, then open Tab B (fresh tab). The name should appear in Tab B automatically within a few seconds without requiring additional interaction.
    - If Tab B does not reflect changes immediately, open DevTools → Console and paste any errors here.
 
-16. Smoke test (optional):
+17. Smoke test (optional):
    - Open `smoke-test.html` and click **Run Smoke Test**. It will sign in anonymously, add a `qa-test-<timestamp>` player, set a vote, and clean up. Use this to confirm DB connectivity programmatically.
 
 Notes

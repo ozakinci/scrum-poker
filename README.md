@@ -13,12 +13,13 @@ Current app highlights
 - Single-file app that syncs live across browsers using Firebase Realtime Database.
 - Single name per user (add once; owner may delete their name).
 - Owner-only voting: only the user who added a name can vote for that name.
-- Card modes: Fibonacci and Days. Mode switches clear votes only (names remain).
+- Card modes: Fibonacci and Days (default). Mode switches clear votes only (names remain).
+- **Statistics display** (when votes revealed): Mean, Median, Average, and Suggested value with smart fallback logic (Mode if consensus, Median if scattered votes) + custom rounding rules.
 - `New Round` clears votes (keeps names). `Reset` starts a fresh round and hides previous names/votes.
 - Hidden votes show an `X` for rows that have a vote (blank when no vote).
 - Connection indicator and status shown in the header (green/orange/red dot).
 - Name input is disabled (greyed out) for a user after they add a name; it re-enables after delete or Reset.
-- Barco logo added to the header.
+- Barco logo in header with optimized sizing; enlarged title text for better visual hierarchy.
 
 Quick setup (Firebase)
 1. In the Firebase console enable **Authentication → Sign-in method → Anonymous**.
