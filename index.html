@@ -71,12 +71,16 @@
     <div class="panel" style="margin-top:12px">
       <div style="display:flex;align-items:center;gap:12px">
         <div style="font-weight:600">Players</div>
-        <div id="statsContainer" style="display:flex; gap: 8px; margin-left:12px; align-items: center; font-size: 14px; display: none;">
-          <div id="meanBox" class="badge">Mean: -</div>
-          <div id="medianBox" class="badge">Median: -</div>
-          <div id="averageBox" class="badge">Average: -</div>
-          <div id="suggestedBox" class="badge">Suggested: -</div>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button id="revealBtn" class="btn ghost">Reveal</button>
+          <button id="newRoundBtn" class="btn">New Round</button>
         </div>
+      </div>
+      <div id="statsContainer" style="display:flex; gap: 8px; margin-left:12px; margin-top:8px; align-items: center; font-size: 14px; display: none;">
+        <div id="meanBox" class="badge">Mean: -</div>
+        <div id="medianBox" class="badge">Median: -</div>
+        <div id="averageBox" class="badge">Average: -</div>
+        <div id="suggestedBox" class="badge">Suggested: -</div>
       </div>
 
       <table id="playersTable">
@@ -136,19 +140,17 @@
     const playersBody = document.getElementById('playersBody');
     const cardsEl = document.getElementById('cards');
     const userStatus = document.getElementById('userStatus');
-    const modeFiboBtn = document.getElementById('modeFibo');
-    const modeDaysBtn = document.getElementById('modeDays');
-    const revealBtn = document.getElementById('revealBtn');
-    const newRoundBtn = document.getElementById('newRoundBtn');
-
-    // Mode buttons
-    const modeFiboBtn = document.getElementById('modeFibo');
-    const modeDaysBtn = document.getElementById('modeDays');
     const statsContainer = document.getElementById('statsContainer');
     const meanBox = document.getElementById('meanBox');
     const medianBox = document.getElementById('medianBox');
     const averageBox = document.getElementById('averageBox');
     const suggestedBox = document.getElementById('suggestedBox');
+
+    // Mode buttons
+    const modeFiboBtn = document.getElementById('modeFibo');
+    const modeDaysBtn = document.getElementById('modeDays');
+    const revealBtn = document.getElementById('revealBtn');
+    const newRoundBtn = document.getElementById('newRoundBtn');
 
     // Single input field + Add button (created in HTML)
     const singleInput = document.getElementById('nameInput');
