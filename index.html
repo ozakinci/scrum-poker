@@ -71,9 +71,11 @@
     <div class="panel" style="margin-top:12px">
       <div style="display:flex;align-items:center;gap:12px">
         <div style="font-weight:600">Players</div>
-        <div style="margin-left:auto;display:flex;gap:8px">
-          <button id="revealBtn" class="btn ghost">Reveal</button>
-          <button id="newRoundBtn" class="btn">New Round</button>
+        <div id="statsContainer" style="display:flex; gap: 8px; margin-left:12px; align-items: center; font-size: 14px; display: none;">
+          <div id="meanBox" class="badge">Mean: -</div>
+          <div id="medianBox" class="badge">Median: -</div>
+          <div id="averageBox" class="badge">Average: -</div>
+          <div id="suggestedBox" class="badge">Suggested: -</div>
         </div>
       </div>
 
@@ -138,6 +140,11 @@
     const modeDaysBtn = document.getElementById('modeDays');
     const revealBtn = document.getElementById('revealBtn');
     const newRoundBtn = document.getElementById('newRoundBtn');
+    const statsContainer = document.getElementById('statsContainer');
+    const meanBox = document.getElementById('meanBox');
+    const medianBox = document.getElementById('medianBox');
+    const averageBox = document.getElementById('averageBox');
+    const suggestedBox = document.getElementById('suggestedBox');
 
     // Single input field + Add button (created in HTML)
     const singleInput = document.getElementById('nameInput');
@@ -382,7 +389,7 @@
 
       onValue(playersRef, snap => {
         players = snap.val() || {};
-        renderPlayers(); renderCards();
+        renderPlayers(); renderCards(); calculateAndRenderStats();
         updateNameInputState();
       });
 
@@ -410,7 +417,7 @@
         modeDaysBtn.style.border = state.mode==='days' ? '2px solid var(--accent)' : '';
         // reveal button text
         revealBtn.textContent = state.revealed ? 'Hide' : 'Reveal';
-        renderPlayers(); renderCards();
+        renderPlayers(); renderCards(); calculateAndRenderStats();
         updateNameInputState();
       });
 
