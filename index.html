@@ -24,8 +24,9 @@
     th{cursor:pointer;user-select:none}
     .badge{background:#eef6ff;color:var(--accent);padding:4px 8px;border-radius:12px;font-size:12px}
     .cards{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-    .card{min-width:48px;padding:10px 12px;border-radius:6px;background:#fff;border:1px solid #ddd;cursor:pointer;text-align:center}
+    .card{min-width:48px;padding:10px 12px;border-radius:6px;background:#fff;border:1px solid #ddd;cursor:pointer;text-align:center;font:inherit}
     .card.selected{box-shadow:0 0 0 3px rgba(74,144,226,0.12);border-color:var(--accent)}
+    .card:hover{background:#f5f9ff}
     .modes{display:flex;gap:8px;margin-top:8px}
     .controls{display:flex;gap:8px;align-items:center;margin-top:12px}
     .status{font-size:13px;color:#fff}
@@ -35,7 +36,7 @@
 <body>
   <header>
     <h1>🃏 Scrum Poker</h1>
-    <div style="margin-left:auto" id="userStatus" class="status"><span id="connDot" style="width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:8px;background:#f39c12;"></span><span id="statusText">Connecting...</span></div>
+    <div style="margin-left:auto" id="userStatus" class="status" role="status" aria-label="Connection status"><span id="connDot" style="width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:8px;background:#f39c12;"></span><span id="statusText">Connecting...</span></div>
   </header>
 
   <div class="container">
@@ -75,10 +76,9 @@
         </div>
       </div>
       <div id="statsContainer" style="display:flex; gap: 8px; margin-left:12px; margin-top:8px; align-items: center; font-size: 14px; display: none;">
-        <div id="meanBox" class="badge">Mean: -</div>
-        <div id="medianBox" class="badge">Median: -</div>
-        <div id="averageBox" class="badge">Average: -</div>
-        <div id="suggestedBox" class="badge">Suggested: -</div>
+        <div id="meanBox" class="badge" title="Mean: Sum of all votes divided by the number of voters">Mean: -</div>
+        <div id="medianBox" class="badge" title="Median: Middle value when votes are sorted; less affected by outliers">Median: -</div>
+        <div id="suggestedBox" class="badge" title="Suggested: Mode if clear consensus, otherwise Median with smart rounding">Suggested: -</div>
       </div>
 
       <table id="playersTable">
@@ -98,7 +98,6 @@
   <script type="module">
     // Import the functions you need from the SDKs you need
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-analytics.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
     import { getDatabase, ref, onValue, set, update, get, remove } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
 
@@ -116,7 +115,6 @@
 
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
-    try { const analytics = getAnalytics(app); } catch(e) { /* ignore analytics errors in local preview */ }
 
     const auth = getAuth(app);
     const db = getDatabase(app);
@@ -141,7 +139,6 @@
     const statsContainer = document.getElementById('statsContainer');
     const meanBox = document.getElementById('meanBox');
     const medianBox = document.getElementById('medianBox');
-    const averageBox = document.getElementById('averageBox');
     const suggestedBox = document.getElementById('suggestedBox');
 
     // Mode buttons
@@ -326,7 +323,8 @@
       const myKey = myPlayerKey();
       const myVote = myKey ? players[myKey] && players[myKey].vote : null;
       set.forEach(v=>{
-        const b = document.createElement('div'); b.className='card'; b.textContent = v;
+        const b = document.createElement('button'); b.className='card'; b.textContent = v;
+        b.setAttribute('aria-label', `Vote ${v}`);
         if(myVote != null && String(myVote) === String(v)) b.classList.add('selected');
         b.addEventListener('click', ()=> onCardClick(v));
         cardsEl.appendChild(b);
@@ -367,11 +365,10 @@
 
       statsContainer.style.display = 'flex';
 
-      // Mean and Average (they are the same)
+      // Mean
       const sum = numericVotes.reduce((a, b) => a + b, 0);
       const mean = sum / numericVotes.length;
       meanBox.textContent = `Mean: ${mean.toFixed(1)}`;
-      averageBox.textContent = `Average: ${mean.toFixed(1)}`;
 
       // Median
       const sortedVotes = [...numericVotes].sort((a, b) => a - b);
@@ -413,11 +410,15 @@
     // Sort handlers
     document.getElementById('thName').addEventListener('click', ()=>{
       if(sortField==='name') sortDir = -sortDir; else { sortField='name'; sortDir=1; }
-      document.getElementById('nameSort').textContent = sortDir===1? '▲':'▼'; renderPlayers();
+      document.getElementById('nameSort').textContent = sortDir===1? '▲':'▼';
+      document.getElementById('thName').setAttribute('aria-sort', sortDir===1? 'ascending':'descending');
+      renderPlayers();
     });
     document.getElementById('thVote').addEventListener('click', ()=>{
       if(sortField==='vote') sortDir = -sortDir; else { sortField='vote'; sortDir=1; }
-      document.getElementById('voteSort').textContent = sortDir===1? '▲':'▼'; renderPlayers();
+      document.getElementById('voteSort').textContent = sortDir===1? '▲':'▼';
+      document.getElementById('thVote').setAttribute('aria-sort', sortDir===1? 'ascending':'descending');
+      renderPlayers();
     });
 
     // Mode buttons
@@ -513,20 +514,6 @@
     renderCards();
     calculateAndRenderStats();
     updateNameInputState();
-
-    // Usage note: recommended Realtime Database rules (set in Firebase console):
-    // {
-    //  "rules": {
-    //    ".read": "auth != null",
-    //    ".write": "auth != null",
-    //    "players": {
-    //      "$playerId": {
-    //        ".write": "(!data.exists() && newData.child('ownerUid').val() === auth.uid) || (data.exists() && data.child('ownerUid').val() === auth.uid)"
-    //      }
-    //    },
-    //    "state": { ".write": "auth != null" }
-    //  }
-    // }
 
   </script>
 </body>

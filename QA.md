@@ -1,16 +1,5 @@
 # QA Checklist — Scrum Poker
 
-## Automated Smoke Test (2026-03-31)
-All passed:
-- Anonymous sign-in
-- Add player
-- Set vote
-- Read player back
-- Set state (revealed=true)
-- Read state back
-- Delete player
-- Reset state
-
 ## Manual QA (open two browser tabs)
 
 1. Start a local HTTP server in the project folder:
@@ -43,15 +32,11 @@ python -m http.server 8000
    - Click `Reveal`.
    - Expected: Both tabs now display all votes.
 
-9. **Statistics display** (NEW):
-   - With votes revealed, you should see four badges below the Reveal/New Round buttons:
+9. **Statistics display**:
+   - With votes revealed, you should see three badges below the Reveal/New Round buttons:
      - **Mean**: Average of all numeric votes
      - **Median**: Middle value when votes are sorted
-     - **Average**: Same as mean (for clarity)
-     - **Suggested**: Intelligent recommendation showing either:
-       - The most repeated vote (if clear consensus)
-       - The median value (if votes are scattered or tied)
-       - Custom rounding: decimals ≤0.5 round to .5 (e.g., 2.1→2.5), decimals >0.5 round up (e.g., 2.6→3)
+     - **Suggested**: Intelligent recommendation showing either the most repeated vote (if clear consensus) or the median value (if votes are scattered or tied) with custom rounding
    - Example tests:
      - Votes [4, 4] → Mean: 4.0, Median: 4.0, Suggested: 4
      - Votes [1, 8] → Mean: 4.5, Median: 4.5, Suggested: 5 (median with rounding)
@@ -83,12 +68,5 @@ python -m http.server 8000
    - Try adding `ALICE` (different case); expected: blocked with an alert (names are case-insensitive unique).
 
 16. Initial load & realtime check:
-   - Open Tab A, add a player, then open Tab B (fresh tab). The name should appear in Tab B automatically within a few seconds without requiring additional interaction.
-   - If Tab B does not reflect changes immediately, open DevTools → Console and paste any errors here.
-
-17. Smoke test (optional):
-   - Open `smoke-test.html` and click **Run Smoke Test**. It will sign in anonymously, add a `qa-test-<timestamp>` player, set a vote, and clean up. Use this to confirm DB connectivity programmatically.
-
-Notes
-- If you want Reset to physically delete all players from the DB (instead of hiding via `roundId`), that requires an admin/CLI action or relaxed rules for a deletion endpoint — I can help implement that if desired.
-- If you see any problems or console errors, copy and paste them here and I will debug immediately.
+    - Open Tab A, add a player, then open Tab B (fresh tab). The name should appear in Tab B automatically within a few seconds without requiring additional interaction.
+    - If Tab B does not reflect changes immediately, open DevTools → Console and check for errors.
