@@ -19,7 +19,6 @@ Current app highlights
 - Hidden votes show an `X` for rows that have a vote (blank when no vote).
 - Connection indicator and status shown in the header (green/orange/red dot).
 - Name input is disabled (greyed out) for a user after they add a name; it re-enables after delete or Reset.
-- Barco logo in header with optimized sizing; enlarged title text for better visual hierarchy.
 
 Quick setup (Firebase)
 1. In the Firebase console enable **Authentication → Sign-in method → Anonymous**.

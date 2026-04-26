@@ -1,6 +1,14 @@
 # Progress — Scrum Poker
 
-## Latest Session (2026-03-31 - Continued Development)
+## Latest Session (2026-04-27 - Cleanup)
+
+### Removed External Image
+- Removed external image link (`https://assets.barco.com/...`) from header
+- Removed associated CSS styling for the logo
+- Updated README to remove logo reference
+- App now displays only emoji title without external dependencies
+
+## Previous Session (2026-03-31 - Continued Development)
 
 ### UI Enhancements
 - **Logo & Title Sizing**: Logo width reduced from 200px to 100px; title font size increased from 20px to 36px for better visual hierarchy
