@@ -33,8 +33,8 @@ Then open `http://localhost:8000/index.html` in two tabs.
 - Add each change to `PROGRESS.md` under a dated session heading, and update `QA.md` when behaviour a tester would check changes.
 - Verify a change with `QA.md` in two live tabs before calling it done: names sync, hidden votes show `X`, reveal shows the statistics, and the connection dot goes green.
 
-## Session startup
+## Session triggers (clock in / clock out)
 
 1. **Project memory** - this file is auto-loaded; use it directly.
 2. **README freshness** - check that `README.md` matches the current behaviour and files; update it when they drift.
-3. **Clock in / clock out** - this project defines no extra start or end steps; the global blocks apply as-is.
+3. **Global blocks** - no project-specific start or end steps; the global blocks apply as-is.
